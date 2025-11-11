@@ -29,6 +29,7 @@ async function run() {
 
     const database = client.db('PawMart_DB');
     const listingsCollection = database.collection('listings');
+    const ordersCollection = database.collection('orders');
 
     //  ========== ROUTES START ==========
 
@@ -37,50 +38,136 @@ async function run() {
       res.send('PawMart Server is Running!');
     });
 
-    // listings collection apis
+    // --------------------------------------------------
 
-    // all listings get & specific user's listings (by email)
+    // Listings Collection APIs
+
+    // get all listings & specific user's listings (by email using query params)
     app.get('/listings', async (req, res) => {
-      const email = req.query.email;
-      const query = {};
-      if (email) {
-        query.email = email;
+      try {
+        const email = req.query.email;
+        const query = {};
+        if (email) {
+          query.email = email;
+        }
+        const cursor = listingsCollection.find(query);
+        const result = await cursor.toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to fetch listings', error });
       }
-      const cursor = listingsCollection.find(query);
-      const result = await cursor.toArray();
-      res.send(result);
     });
 
-    // recent listings get (6)
+    // get recent 6 listings
     app.get('/listings/recent', async (req, res) => {
-      const sortFields = { date: -1 };
-      const limitNum = 6;
-      const cursor = listingsCollection.find().sort(sortFields).limit(limitNum);
-      const result = await cursor.toArray();
-      res.send(result);
+      try {
+        const sortFields = { date: -1 };
+        const limitNum = 6;
+        const cursor = listingsCollection
+          .find()
+          .sort(sortFields)
+          .limit(limitNum);
+        const result = await cursor.toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to fetch listings', error });
+      }
     });
 
-    // specific listing get
-    app.get('/listings/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await listingsCollection.findOne(query);
-      res.send(result);
+    // get single listing by ID
+    app.get('/listings/:listingId', async (req, res) => {
+      try {
+        const id = req.params.listingId;
+        const query = { _id: new ObjectId(id) };
+        const result = await listingsCollection.findOne(query);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to fetch listing', error });
+      }
     });
 
-    // new listing create
+    // get listings by category
+    app.get('/listings/category/:name', async (req, res) => {
+      try {
+        const categoryName = req.params.name;
+        const query = { category: categoryName };
+        const cursor = listingsCollection.find(query);
+        const result = await cursor.toArray();
+        res.send(result);
+      } catch (error) {
+        res
+          .status(500)
+          .send({ message: 'Failed to fetch filtered listings', error });
+      }
+    });
+
+    // create new listing
     app.post('/listings', async (req, res) => {
-      const newListing = req.body;
-      const result = await listingsCollection.insertOne(newListing);
-      res.send(result);
+      try {
+        const newListing = req.body;
+        const result = await listingsCollection.insertOne(newListing);
+        res.send(result);
+      } catch (error) {
+        res
+          .status(500)
+          .send({ message: 'Failed to create new listing', error });
+      }
     });
 
-    // listing delete
-    app.delete('/listings/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await listingsCollection.deleteOne(query);
-      res.send(result);
+    // update listing
+    app.put('/listings/:listingId', async (req, res) => {
+      try {
+        const id = req.params.listingId;
+        const updatedListing = req.body;
+        const query = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: { ...updatedListing },
+        };
+        const result = await listingsCollection.updateOne(query, updateDoc);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to update listing', error });
+      }
+    });
+
+    // delete listing
+    app.delete('/listings/:listingId', async (req, res) => {
+      try {
+        const id = req.params.listingId;
+        const query = { _id: new ObjectId(id) };
+        const result = await listingsCollection.deleteOne(query);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to delete listing', error });
+      }
+    });
+
+    // --------------------------------------------------
+
+    // Orders Collection APIs
+
+    // create new order
+    app.post('/orders', async (req, res) => {
+      try {
+        const newOrder = req.body;
+        const result = await ordersCollection.insertOne(newOrder);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to create new order', error });
+      }
+    });
+
+    // get orders by user email
+    app.get('/orders', async (req, res) => {
+      try {
+        const email = req.query.email;
+        const query = { email: email };
+        const cursor = ordersCollection.find(query);
+        const result = await cursor.toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to fetch user orders', error });
+      }
     });
 
     //  ========== ROUTES END ==========
