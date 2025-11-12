@@ -1,6 +1,17 @@
 const express = require('express');
 const cors = require('cors');
+const admin = require('firebase-admin');
 require('dotenv').config();
+
+// mongodb connection
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const uri = process.env.MONGODB_URI;
+
+// firebase connection
+const serviceAccount = require('./pawmart-zone-firebase-admin-key.json');
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -9,9 +20,25 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// mongodb connection
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const uri = process.env.MONGODB_URI;
+// verify firebase token
+const verifyFirebaseToken = async (req, res, next) => {
+  if (!req.headers.authorization) {
+    return res.status(401).send({ message: 'Unauthorized access' });
+  }
+  const token = req.headers.authorization.split(' ')[1];
+  if (!token) {
+    return res.status(401).send({ message: 'Unauthorized access' });
+  }
+
+  // verify token
+  try {
+    const decoded = await admin.auth().verifyIdToken(token);
+    req.token.email = decoded.email;
+    next();
+  } catch (error) {
+    return res.status(401).send({ message: 'Unauthorized access' });
+  }
+};
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -102,7 +129,7 @@ async function run() {
     });
 
     // create new listing
-    app.post('/listings', async (req, res) => {
+    app.post('/listings', verifyFirebaseToken, async (req, res) => {
       try {
         const newListing = req.body;
         const result = await listingsCollection.insertOne(newListing);
@@ -115,7 +142,7 @@ async function run() {
     });
 
     // update listing
-    app.put('/listings/:listingId', async (req, res) => {
+    app.put('/listings/:listingId', verifyFirebaseToken, async (req, res) => {
       try {
         const id = req.params.listingId;
         const updatedListing = req.body;
@@ -131,23 +158,27 @@ async function run() {
     });
 
     // delete listing
-    app.delete('/listings/:listingId', async (req, res) => {
-      try {
-        const id = req.params.listingId;
-        const query = { _id: new ObjectId(id) };
-        const result = await listingsCollection.deleteOne(query);
-        res.send(result);
-      } catch (error) {
-        res.status(500).send({ message: 'Failed to delete listing', error });
+    app.delete(
+      '/listings/:listingId',
+      verifyFirebaseToken,
+      async (req, res) => {
+        try {
+          const id = req.params.listingId;
+          const query = { _id: new ObjectId(id) };
+          const result = await listingsCollection.deleteOne(query);
+          res.send(result);
+        } catch (error) {
+          res.status(500).send({ message: 'Failed to delete listing', error });
+        }
       }
-    });
+    );
 
     // --------------------------------------------------
 
     // Orders Collection APIs
 
     // create new order
-    app.post('/orders', async (req, res) => {
+    app.post('/orders', verifyFirebaseToken, async (req, res) => {
       try {
         const newOrder = req.body;
         const result = await ordersCollection.insertOne(newOrder);
@@ -158,7 +189,7 @@ async function run() {
     });
 
     // get orders by user email
-    app.get('/orders', async (req, res) => {
+    app.get('/orders', verifyFirebaseToken, async (req, res) => {
       try {
         const email = req.query.email;
         const query = { email: email };

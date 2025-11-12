@@ -1,2 +1,4 @@
 node_modules
 .env
+
+pawmart-zone-firebase-admin-key.json
