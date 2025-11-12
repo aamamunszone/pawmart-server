@@ -37,7 +37,7 @@ const verifyFirebaseToken = async (req, res, next) => {
   // verify token
   try {
     const decoded = await admin.auth().verifyIdToken(token);
-    req.token.email = decoded.email;
+    req.decoded = decoded;
     next();
   } catch (error) {
     return res.status(401).send({ message: 'Unauthorized access' });
@@ -136,7 +136,7 @@ async function run() {
     app.post('/listings', verifyFirebaseToken, async (req, res) => {
       try {
         const newListing = req.body;
-        if (req.decoded !== newListing.email) {
+        if (req.decoded.email !== newListing.email) {
           return res.status(403).send({ message: 'Forbidden access' });
         }
         const result = await listingsCollection.insertOne(newListing);
@@ -188,7 +188,7 @@ async function run() {
     app.post('/orders', verifyFirebaseToken, async (req, res) => {
       try {
         const newOrder = req.body;
-        if (req.decoded !== newOrder.email) {
+        if (req.decoded.email !== newOrder.email) {
           return res.status(403).send({ message: 'Forbidden access' });
         }
         const result = await ordersCollection.insertOne(newOrder);
@@ -202,7 +202,7 @@ async function run() {
     app.get('/orders', verifyFirebaseToken, async (req, res) => {
       try {
         const email = req.query.email;
-        if (email !== req.decoded) {
+        if (email !== req.decoded.email) {
           return res.status(403).send({ message: 'Forbidden access' });
         }
         const query = { email: email };
