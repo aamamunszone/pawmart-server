@@ -132,6 +132,9 @@ async function run() {
     app.post('/listings', verifyFirebaseToken, async (req, res) => {
       try {
         const newListing = req.body;
+        if (req.decoded !== newListing.email) {
+          return res.status(403).send({ message: 'Forbidden access' });
+        }
         const result = await listingsCollection.insertOne(newListing);
         res.send(result);
       } catch (error) {
@@ -177,10 +180,13 @@ async function run() {
 
     // Orders Collection APIs
 
-    // create new order
+    // create new order (protected)
     app.post('/orders', verifyFirebaseToken, async (req, res) => {
       try {
         const newOrder = req.body;
+        if (req.decoded !== newOrder.email) {
+          return res.status(403).send({ message: 'Forbidden access' });
+        }
         const result = await ordersCollection.insertOne(newOrder);
         res.send(result);
       } catch (error) {
@@ -188,10 +194,13 @@ async function run() {
       }
     });
 
-    // get orders by user email
+    // get orders by user email (protected)
     app.get('/orders', verifyFirebaseToken, async (req, res) => {
       try {
         const email = req.query.email;
+        if (email !== req.decoded) {
+          return res.status(403).send({ message: 'Forbidden access' });
+        }
         const query = { email: email };
         const cursor = ordersCollection.find(query);
         const result = await cursor.toArray();
