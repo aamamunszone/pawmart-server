@@ -230,7 +230,7 @@ Sample Request Body:
 
 ```json
 {
-  "productId": "507f1f77bcf86cd799439011",
+  "productId": "507f1f77bcf86cd799430002",
   "productName": "Golden Retriever Puppy",
   "buyerName": "John Doe",
   "email": "buyer@example.com",
